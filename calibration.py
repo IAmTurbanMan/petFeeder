@@ -16,7 +16,7 @@ import ADC
 from configparser import ConfigParser as cp
 from time import sleep
 
-#define variables
+#define variables and list
 waterChannel = 0
 foodChannel = 1
 readingsList = []
@@ -25,6 +25,10 @@ readingsList = []
 config_ini = cp()
 config_ini.read('./config.ini')
 
+#function to populate readingsList
+#runs ADC.voltageConvert and ADC.adcMeasure to get ADC readings
+#list must be list
+#channel must be int from 0-7
 #4 readings per second for 5 seconds
 def readings (list, channel):
 	for x in range (0,20):
@@ -36,7 +40,8 @@ def listAvg (list):
 	return sum(list) / len(list)
 
 #function to populate config.ini with average values taken from readings
-#args section and setting must be str
+#section and setting must be str
+#channel must be int from 0-7
 def writeConfig (channel, section, setting):
 	readings(readingsList, channel)
 	#print (list)
@@ -49,6 +54,7 @@ def commitChanges():
 		config_ini.write(config_file)
 
 #function to reset config.ini settings to 0
+#section and setting must be str
 def resetConfig (section, setting):
 	config_ini[section][setting] = '0'
 
@@ -85,7 +91,7 @@ while True:
 		a = input('Please fill your bowl to half level then press Enter.')
 		writeConfig(waterChannel, 'WATERBOWL', 'half_full_bowl')
 
-		#asks user to fill bowl to a low level, then waits for user to press Enter
+		#asks user to fill bowl to full level, then waits for user to press Enter
 		#same as above
 		a = input('Please fill your bowl to full level then press Enter.')
 		writeConfig(waterChannel, 'WATERBOWL', 'full_bowl')
@@ -93,14 +99,18 @@ while True:
 		commitChanges()
 
 	if selection == '2':
-		#asks user to place empty bowl on food FSR, waits for uiser to press Enter
+		#asks user to place empty bowl on food FSR, waits for user to press Enter
 		#runs function to write avg value to config.ini file
 		a = input('Please place your empty food bowl on the sensor then press Enter.')
 		writeConfig(foodChannel, 'FOODBOWL', 'empty_bowl')
 
+		#asks user to fill bowl half full, waits for user to press Enter
+		#writes to config.ini
 		a = input('Please fill your bowl to half level then press Enter.')
 		writeConfig(foodChannel, 'FOODBOWL', 'half_full_bowl')
 
+		#asks user to fill bowl to full level, waits for user to press Enter
+		#writes to config.ini
 		a = input('Please fill your bowl to full level then press Enter.')
 		writeConfig(foodChannel, 'FOODBOWL', 'full_bowl')
 
