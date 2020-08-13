@@ -1,2 +1,5 @@
 #ignore .ini file
 *.ini
+
+#ignore .json file
+*.json
