@@ -1,7 +1,15 @@
-##########################################################################
-#				Calibration				 #
-#				Rash Kader				 #
-##########################################################################
+#################################
+# calibration.py		#
+# calibration file to run	#
+# as a first time setup or 	#
+# or when changing bowls.	#
+#				#
+# written by: Rash Kader	#
+#	      Wesley Crank	#
+#	      Na Ly		#
+#	      Noah Fuji		#
+#################################
+
 #!/usr/bin/python
 
 import ADC

@@ -1,8 +1,17 @@
-import spidev
+#################################
+# ADC.py			#
+# module for getting ADC data	#
+# and voltage conversions	#
+#				#
+# written by: Rash Kader	#
+#	      Wesley Crank	#
+#	      Na Ly		#
+#	      Noah Fuji		#
+#################################
 
-#define variables
-waterBowlChannel = 0
-foodBowlChannel = 1
+#!/usr/bin/python
+
+import spidev
 
 #create SPI
 spi = spidev.SpiDev()
