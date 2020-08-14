@@ -16,7 +16,7 @@
 #!/usr/bin/python
 
 import ADC
-import json
+#import json
 import os
 from configparser import ConfigParser as cp
 from time import sleep
@@ -34,12 +34,12 @@ config_ini.read('./config.ini')
 #function to populate readingsList
 #runs ADC.voltageConvert and ADC.adcMeasure to get ADC readings
 #list must be list
-#channel must be int from 0-7
-#4 readings per second for 5 seconds
+#channel must be int from 0-1
+#10 readings per second for 5 seconds
 def readings (list, channel):
-	for x in range (0,20):
-		list.append(ADC.voltageConvert(ADC.adcMeasure(channel)))
-		sleep(.25)
+	for x in range (0,50):
+		list.append(ADC.adcMeasure(channel))
+		sleep(.1)
 
 #function to find avg of a list of ints
 def listAvg (list):
@@ -51,7 +51,7 @@ def listAvg (list):
 def writeConfig (channel, section, setting):
 	readings(readingsList, channel)
 	#print (list)
-	config_ini[section][setting] = str(round(listAvg(readingsList), 4))
+	config_ini[section][setting] = str(int(listAvg(readingsList)))
 	readingsList.clear()
 
 #function to commit changes to config.ini
@@ -105,19 +105,19 @@ while True:
 
 		commitChanges()
 
-		empty_bowl = config_ini[section]['empty_bowl']
-		low_water = config_ini[section]['low_water']
-		half_full_bowl = config_ini[section]['half_full_bowl']
-		full_bowl = config_ini[section]['full_bowl']
-		waterMeasurements = {
-			"empty_bowl":empty_bowl,
-			"low_water":low_water,
-			"half_full_bowl":half_full_bowl,
-			"full_bowl":full_bowl
-			}
+		#empty_bowl = config_ini[section]['empty_bowl']
+		#low_water = config_ini[section]['low_water']
+		#half_full_bowl = config_ini[section]['half_full_bowl']
+		#full_bowl = config_ini[section]['full_bowl']
+		#waterMeasurements = {
+		#	"empty_bowl":empty_bowl,
+		#	"low_water":low_water,
+		#	"half_full_bowl":half_full_bowl,
+		#	"full_bowl":full_bowl
+		#	}
 
-		with open ('waterMeasurements.json','w') as write_file:
-			json.dump(waterMeasurements, write_file)
+		#with open ('waterMeasurements.json','w') as write_file:
+		#	json.dump(waterMeasurements, write_file)
 
 	if selection == '2':
 		section = 'FOODBOWL'
@@ -139,17 +139,17 @@ while True:
 
 		commitChanges()
 
-		empty_bowl = config_ini[section]['empty_bowl']
-		half_full_bowl = config_ini[section]['half_full_bowl']
-		full_bowl = config_ini[section]['full_bowl']
-		foodMeasurements = {
-			"empty_bowl":empty_bowl,
-			"half_full_bowl":half_full_bowl,
-			"full_bowl":full_bowl
-			}
+		#empty_bowl = config_ini[section]['empty_bowl']
+		#half_full_bowl = config_ini[section]['half_full_bowl']
+		#full_bowl = config_ini[section]['full_bowl']
+		#foodMeasurements = {
+		#	"empty_bowl":empty_bowl,
+		#	"half_full_bowl":half_full_bowl,
+		#	"full_bowl":full_bowl
+		#	}
 
-		with open ('foodMeasurements.json','w') as write_file:
-			json.dump(foodMeasurements, write_file)
+		#with open ('foodMeasurements.json','w') as write_file:
+		#	json.dump(foodMeasurements, write_file)
 
 	if selection == '3':
 		resetConfig('WATERBOWL','empty_bowl')

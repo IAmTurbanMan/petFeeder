@@ -11,25 +11,29 @@
 
 #!/usr/bin/python
 
-import spidev
+import busio
+import digitalio
+import board
+import adafruit_mcp3xxx.mcp3008 as adc
+from adafruit_mcp3xxx.analog_in import AnalogIn
 
-#create SPI
-spi = spidev.SpiDev()
-spi.open(0, 0)
-spi.max_speed_hz = 1000000
+#create objects to read ADC data
+spibus = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
+chip = digitalio.DigitalInOut(board.D8)
+ADC = adc.MCP3008(spibus,chip)
+sensor1 = AnalogIn(ADC,adc.P0)
+sensor2 = AnalogIn(ADC,adc.P1)
 
-#function to read SPI data from MCP3008
-#channel must be int from 0-7
+sensorReading = 0
+
+#function to read ADC data
+#channel must be int 0 or 1 since only two sensors are being used
+#on channel 0 and 1
 def adcMeasure(channel):
-	if channel > 7 or channel < 0:
+	if channel > 1 or channel < 0:
 		return -1
-	r = spi.xfer2([1, 8 + channel << 4, 0])
-	data = ((r[1] & 3) << 8) + r[2]
-	return data
-
-#function to convert adc data to voltage level
-#assumed voltage in = 3.3Volts
-def voltageConvert(data):
-	volts = (data * 3.3) / float(1023)
-	volts = round(volts, 3)
-	return volts
+	if channel == 0:
+		sensor_reading = sensor1.value
+	if channel == 1:
+		sensor_reading = sensor2.value
+	return sensor_reading
