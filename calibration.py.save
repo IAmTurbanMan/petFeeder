@@ -33,21 +33,28 @@ config_ini = cp()
 config_ini.read('./config.ini')
 
 #function to populate readingsList
-#runs ADC.adcMeasure to get ADC readings
+#runs ADC.voltageConvert and ADC.adcMeasure to get ADC readings
+#list must be list
 #channel must be int from 0-1
 #10 readings per second for 5 seconds
-def readings (channel):
-	global readingsList
+def readings (list, channel):
 	for x in range (0,50):
-		readingsList.append(ADC.adcMeasure(channel))
+		list.append(ADC.adcMeasure(channel))
 		sleep(.1)
+		return list
 
 #function to find avg of a list of ints
 def listAvg (list):
 	return sum(list) / len(list)
 
-#function to write values to config.ini
+#function to populate config.ini with average values taken from readings
 #section and setting must be str
+#channel must be int from 0-7
+#def writeConfig (channel, section, setting):
+#	readings(readingsList, channel)
+#	#print (list)
+#	config_ini[section][setting] = str(int(listAvg(readingsList)))
+#	readingsList.clear()
 def writeConfig (section, setting, value):
 	config_ini[section][setting] = str(value)
 
@@ -56,11 +63,6 @@ def commitChanges():
 	with open('./config.ini', 'w') as config_file:
 		config_ini.write(config_file)
 
-#function for use in setting feeding times
-#loops message with approprite wording
-#asks for time in %I:%M%p format
-#makes any necessary conversions in timeStr to match time format
-#replaces default value '0' in feedingTime
 def messageLoop(n):
 	global feedingTimes
 	nth = ''
@@ -112,6 +114,20 @@ def menu():
 #menu
 while selection != '5':
 
+#	os.system('clear')
+#	print(''
+#**********************************
+# Welcome to weight calibration.  *
+# please make a selection.        *
+#			         *
+# 1. Water bowl calibration       *
+# 2. Food bowl calibration 	 *
+# 3. Enter timing information	 *
+# 4. Reset config file		 *
+# 5. Exit			 *
+#**********************************
+#	''')
+
 	menu()
 	if selection == '1':
 		section = 'WATERBOWL'
@@ -119,24 +135,21 @@ while selection != '5':
 		#asks user to place empty bowl on water FSR, then waits for user to press Enter
 		#runs function to write avg value to config.ini file
 		a = input('Please place your empty water bowl on the sensor then press Enter.')
-		readings(channel)
-		avg = int(listAvg(readingsList))
+		avg = listAvg(readings(readingsList, channel))
 		writeConfig(section, 'empty_bowl', avg)
 		readingsList.clear()
 
 		#asks user to fill bowl to a low level, then waits for user to press Enter
 		#same as above
 		a = input('Please fill your bowl to a low level then press Enter.')
-		readings(channel)
-		avg = int(listAvg(readingsList))
+		avg = listAvg(readings(readingsList, channel))
 		writeConfig(section, 'low_water', avg)
 		readingsList.clear()
 
 		#asks user to fill bowl to full level, then waits for user to press Enter
 		#same as above
 		a = input('Please fill your bowl to full level then press Enter.')
-		readings(channel)
-		avg = int(listAvg(readingsList))
+		avg = listAvg(readings(readingsList, channel))
 		writeConfig(section, 'full_bowl', avg)
 		readingsList.clear()
 
@@ -148,16 +161,14 @@ while selection != '5':
 		#asks user to place empty bowl on food FSR, waits for user to press Enter
 		#runs function to write avg value to config.ini file
 		a = input('Please place your empty food bowl on the sensor then press Enter.')
-		readings(channel)
-		avg = int(listAvg(readingsList))
+		avg = listAvg(readings(readingsList, channel))
 		writeConfig(section, 'empty_bowl', avg)
 		readingsList.clear()
 
 		#asks user to fill bowl to full level, waits for user to press Enter
 		#writes to config.ini
 		a = input('Please fill your bowl to full level then press Enter.')
-		readings(channel)
-		avg = int(listAvg(readingsList))
+		avg = listAvg(readings(readingsList, channel))
 		writeConfig(section, 'full_bowl', avg)
 		readingsList.clear()
 
@@ -192,9 +203,9 @@ while selection != '5':
 #			n = int(input('please enter a number between 1 and 4: ')
 
 		messageLoop(n)
-		y = 0
 		for x in feedingTimes:
 			setting = ''
+			y = 0
 			if y == 0: setting = 'food_timer1'
 			if y == 1: setting = 'food_timer2'
 			if y == 2: setting = 'food_timer3'
@@ -211,11 +222,6 @@ while selection != '5':
 		resetConfig('WATERBOWL','full_bowl')
 		resetConfig('FOODBOWL','empty_bowl')
 		resetConfig('FOODBOWL','full_bowl')
-		resetConfig('TIMING','water_bowl_polling')
-		resetConfig('TIMING','food_timer1')
-		resetConfig('TIMING','food_timer2')
-		resetConfig('TIMING','food_timer3')
-		resetConfig('TIMING','food_timer3')
 		print ('config.ini reset to defaults')
 
 		commitChanges()
