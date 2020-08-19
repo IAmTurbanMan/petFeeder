@@ -24,10 +24,12 @@ GPIO.setwarnings(False)
 pins = [2,3]
 waterThresh = []
 foodThresh = []
+feedingTimes = []
 relayOn = ['off','off']
 running = 'y'
 sensor1 = 0
 sensor2 = 0
+delay = 0
 
 #Relay pin setup
 #Must be set up as inputs, so relays stay off
@@ -40,42 +42,59 @@ config_ini.read('./config.ini')
 
 #function to read config.ini and return variables
 #and add them to a list
-def thresholds(section,setting, list):
+def configRead(section,setting, list):
 	value = config_ini[section][setting]
-	list.append(int(value))
+	if value != '0':
+		list.append(int(value))
 
-thresholds('WATERBOWL','empty_bowl',waterThresh)
-thresholds('WATERBOWL','low_water',waterThresh)
-thresholds('WATERBOWL','half_full_bowl',waterThresh)
-thresholds('WATERBOWL','full_bowl',waterThresh)
+#thresholds('WATERBOWL','empty_bowl',waterThresh)
+configRead('WATERBOWL','low_water',waterThresh)
+configRead('WATERBOWL','full_bowl',waterThresh)
 
-thresholds('FOODBOWL','empty_bowl',foodThresh)
-thresholds('FOODBOWL','half_full_bowl',foodThresh)
-thresholds('FOODBOWL','full_bowl',foodThresh)
+configRead('FOODBOWL','empty_bowl',foodThresh)
+configRead('FOODBOWL','full_bowl',foodThresh)
+
+configRead('TIMING','food_timer1',feedingTimers)
+configRead('TIMING','food_timer2',feedingTimers)
+configRead('TIMING','food_timer3',feedingTimers)
+configRead('TIMING','food_timer4',feedingTimers)
+
+delay = config_ini['TIMING']['water_bowl_polling']
 
 #function to tell realy 1 to switch on or off depending on
 #threshholds
 def waterRelaySwitch():
-	global sensor1, sensor2
+	global sensor1
 	global relayOn, waterThresh
 	while running != 'n':
 		if (sensor1 < waterThresh[1] and relayOn[0] == 'off'):
 			relayOn[0] = 'on'
+			waterQuickPollThread.start()
 		elif (sensor1 > waterThresh[3] and relayOn[0] == 'on'):
 			relayOn[0] = 'off'
+			waterQuickPollThread.join()
+
+def foodRelaySwitch():
+	global sensor2
+	global relayOn, foodThresh
+	while running != 'n':
+		
 
 #function to poll FSRs
-def polling(seconds):
+def polling(seconds,sensor):
 	global sensor1, sensor2
 	while running != 'n':
-		sensor1 = ADC.adcMeasure(0)
-		sensor2 = ADC.adcMeasure(1)
+		if sensor == 1: sensor1 = ADC.adcMeasure(0)
+		if sensor == 2: sensor2 = ADC.adcMeasure(1)
 		sleep(seconds)
 
-pollThread = threading.Thread(target=polling,args=(1,))
-pollThread.start()
-waterThread = threading.Thread(target=waterRelaySwitch)
-waterThread.start()
+waterPollThread = threading.Thread(target=polling,args=(delay,1))
+waterRelayThread = threading.Thread(target=waterRelaySwitch)
+waterQuickPollThread = threading.Thread(target=polling,args=(.25,1))
+foodQuickPollThread = threading.Thread(tarhet=polling,args=(.25,2))
+
+waterPollThread.start()
+waterRelayThread.start()
 
 while running != 'n':
 #	sensor1 = ADC.adcMeasure(0)

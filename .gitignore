@@ -3,3 +3,9 @@
 
 #ignore .json file
 *.json
+
+#ignore .save file
+*.save
+
+#ignore .pyc file
+*.pyc

@@ -32,6 +32,10 @@ feedingTimes = ['0','0','0','0']
 config_ini = cp()
 config_ini.read('./config.ini')
 
+#clear screen
+def clear():
+	os.system('clear')
+
 #function to populate readingsList
 #runs ADC.adcMeasure to get ADC readings
 #channel must be int from 0-1
@@ -58,16 +62,18 @@ def commitChanges():
 
 #function for use in setting feeding times
 #loops message with approprite wording
-#asks for time in %I:%M%p format
+#time must be in %I:%M%p format
 #makes any necessary conversions in timeStr to match time format
-#replaces default value '0' in feedingTime
-def messageLoop(n):
+#throws error if not correct format
+#adds timeStr to feedingTimes list
+def setFeedingTimes(n):
 	global feedingTimes
 	nth = ''
 	timeStr = ''
+	format = '%I:%M%p'
 	x = 0
 	for y in range (0,n):
-		os.system('clear')
+		clear()
 		if x == 0: nth = 'first'
 		if x == 1: nth = 'second'
 		if x == 2: nth = 'third'
@@ -79,20 +85,29 @@ def messageLoop(n):
 				 *
 **********************************
 		""".format(nth))
-		timeStr = input('Time: ')
-		timeStr = timeStr.replace(' ','')
-		timeStr = timeStr.upper()
-		feedingTimes[x] = timeStr
-		x += 1
+		while True:
+			timeStr = input('Time: ')
+			timeStr = timeStr.replace(' ','')
+			timeStr = timeStr.upper()
+			print (timeStr)
+			if len(timeStr) == 6:
+				timeStr = '0' + timeStr
+			print (timeStr)
+			sleep (1)
+			try:
+				datetime.datetime.strptime(timeStr, format)
+				feedingTimes[x] = timeStr
+				x += 1
+				break
+			except ValueError:
+				print ('Must be in HH:MMpm format')
 
 #function to reset config.ini settings to 0
 #section and setting must be str
 def resetConfig (section, setting):
 	config_ini[section][setting] = '0'
 
-def clear():
-	os.system('clear')
-
+#display menu
 def menu():
 	global selection
 	clear()
@@ -109,7 +124,8 @@ def menu():
 **********************************
 	''')
 	selection = input('Selection: ')
-#menu
+
+#Main loop
 while selection != '5':
 
 	menu()
@@ -166,32 +182,55 @@ while selection != '5':
 	if selection == '3':
 		clear()
 		section = 'TIMING'
-		print ("""
+		timeEntered = False
+		#Ask user to enter how often to check the water bowl readings in minutes
+		#converts to seconds and writes to .ini file
+		#0 exits to menu
+		if not timeEntered:
+			print ("""
 **********************************
  How often would you like the	 *
  system to check the water level?*
 				 *
+ 0 to exit			 *
+				 *
 **********************************
- 		""")
-		time = int(input('Minutes: '))
-		time = time * 60
-		writeConfig(section,'water_bowl_polling',time)
+ 			""")
+			time = int(input('Minutes: '))
+			time = time * 60
+			if time == 0:
+				menu()
+			else:
+				writeConfig(section,'water_bowl_polling',time)
+				timeEntered = True
 		sleep(.5)
-		os.system('clear')
+		clear()
 
+		#Asks user to enter how many times per day they want the food to fill up
+		#will only acept 0 - 4, 0 exits to menu, 1 - 4 will run setFeedingTimes
 		print ("""
 **********************************
  How many times per day would 	 *
  you like the feeder to run?	 *
 				 *
+ 0 to exit			 *
+				 *
 **********************************
 		""")
-		n = int(input('1-4: '))
 
-#		while (n < 1 or n > 4):
-#			n = int(input('please enter a number between 1 and 4: ')
+		while True:
+			try:
+				n = int(input ('1-4: '))
+			except ValueError:
+				print ('Must be a number')
+			else:
+				if 0 <= n < 4: break
+				else: print ('Must be between 1 and 4, 0 to exit')
 
-		messageLoop(n)
+		if n == 0: menu()
+		else: setFeedingTimes(n)
+
+		#loops through settings and feedingTimes list to write to .ini
 		y = 0
 		for x in feedingTimes:
 			setting = ''
@@ -205,6 +244,7 @@ while selection != '5':
 		commitChanges()
 
 	if selection == '4':
+		#resets all settings in .ini to 0
 		clear()
 		resetConfig('WATERBOWL','empty_bowl')
 		resetConfig('WATERBOWL','low_water')
