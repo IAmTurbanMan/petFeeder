@@ -1,5 +1,5 @@
 #################################
-# relay.pi			#
+# relay.py			#
 # relay control for pet food	#
 # and water dispenser		#
 #				#
@@ -28,8 +28,9 @@ foodThresh = []
 feedingTimers = []
 relayOn = ['off','off']
 running = 'y'
-sensor1 = 0
-sensor2 = 0
+foodRun = 'n'
+sensor1 = ADC.adcMeasure(0)
+sensor2 = ADC.adcMeasure(1)
 delay = 0
 
 #Relay pin setup
@@ -63,113 +64,135 @@ configRead('TIMING','food_timer2',feedingTimers)
 configRead('TIMING','food_timer3',feedingTimers)
 configRead('TIMING','food_timer4',feedingTimers)
 
-delay = config_ini['TIMING']['water_bowl_polling']
+delay = int(config_ini['TIMING']['water_bowl_polling'])
 
-#function to tell realy 1 to switch on or off depending on
-#threshholds
-def waterRelaySwitch():
+format = '%I:%M%p'
+minTimes = []
+maxTimes = []
+for x in range(len(feedingTimers)):
+	minTimeObj = datetime.strptime(feedingTimers[x],format) - timedelta(minutes = 10)
+	minTimes.append(minTimeObj)
+	maxTimeObj = datetime.strptime(feedingTimers[x],format) + timedelta(minutes = 10)
+	maxTimes.append(maxTimeObj)
+
+minTimes = [minTimes[x].time() for x in range(len(minTimes))]
+maxTimes = [maxTimes[x].time() for x in range(len(maxTimes))]
+
+#def relayOff(relay,sensor,chan,threshold):
+#	global sensor1, sensor2
+#	global relayOn, foodThresh, waterThresh
+#	while relay != 'off':
+#		sensor = ADC.adcMeasure(chan)
+#
+#	if sensor >= threshold:
+#		relay = 'off'
+
+#function to turn relay1 on
+def waterRelayOn():
 	global sensor1
 	global relayOn, waterThresh
 	while running != 'n':
-		if (sensor1 < waterThresh[1] and relayOn[0] == 'off'):
+		if (sensor1 < waterThresh[0]):
 			relayOn[0] = 'on'
-			waterQuickPollThread.start()
-		elif (sensor1 > waterThresh[3] and relayOn[0] == 'on'):
-			relayOn[0] = 'off'
-			waterQuickPollThread.join()
+			#print('on')
 
-def timeParsing(string):
-	x = datetime.strptime(string,'%I:%M%p')
-	return x
+def waterRelayOff():
+	global sensor1
+	global relayOn, waterThresh
+	while running != 'n':
+		while (relayOn[0] == 'on'):
+			sensor1 = ADC.adcMeasure(0)
+			if sensor1 >= waterThresh[1]: relayOn[0] = 'off'
+			else: continue
 
 #Excellent solution that I was able to incorporate from StackOverflow user rouble
 #stackoverflow.com/questions/10048249/how-do-i-determine-if-current-time-is-within-a-specified-range-using-pythons-da
 #args are all datetime stamps
+#checks if midnight is within range
 def nowIsBetween(nowTime, minTime, maxTime):
 	if minTime < maxTime:
 		return nowTime >= minTime and nowTime <= maxTime
 	else:
 		return nowTime >= minTime or nowTime <= maxTime
 
-
-def foodRelaySwitch():
+#function for relay2 control
+def foodRelayOn():
 	global sensor2
 	global relayOn, foodThresh, feedingTimers
-	minTimes = []
-	maxTimes = []
-	for x in range(len(feedingTimers)):
-		minTimeObj = timeParsing(feedingTimers[x]) - timedelta(minutes = 10)
-		minTimes.append(minTimeObj)
-		maxTimeObj = timeParsing(feedingTimers[x]) + timedelta(minutes = 10)
-		maxTimes.append(maxTimeObj)
-
-	minTimes = [minTimes[x].time() for x in range(len(minTimes))]
-	maxTimes = [maxTimes[x].time() for x in range(len(maxTimes))]
 
 	while running != 'n':
 		now = datetime.now().time()
 		for x in range (len(feedingTimers)):
-			if (nowIsBetween(now, minTimes[x], maxTimes[x]) and relay[1] == 'off'): 
+			if (nowIsBetween(now, minTimes[x], maxTimes[x])):
 				relayOn[1] = 'on'
-				foodQuickPollThread.start()
-				if sensor2 > foodThresh[1]:
-					relayOn[1] == 'off'
-					foodQuickPollThread.join()
-		sleep (60)
+		sleep (60*60)
+
+def foodRelayOff():
+	global sensor2
+	global relayOn, foodThresh
+	while running != 'n':
+		while (relayOn[1] != 'off'):
+			sensor2 = ADC.adcMeasure(1)
+			if sensor2 >= foodThresh[1]: relayOn[1] = 'off'
+			else: continue
+
+#function to poll FSRs
+def polling(seconds):
+	global sensor1
+	while running != 'n':
+		sensor1 = ADC.adcMeasure(0)
+#		if sensor == 2: sensor2 = ADC.adcMeasure(1)
+		sleep(seconds)
 
 #function to check relay status
 def relayOnOrOff():
-	if relayOn[0] == 'on':
-		print (relayOn[0])
-		GPIO.setup(pins[0], GPIO.OUT)
-	if relayOn[1] == 'on':
-		print (relayOn[1])
-		GPIO.setup(pins[1], GPIO.OUT)
-	if relayOn[0] == 'off':
-		print (relayOn[0])
-		GPIO.setup(pins[0], GPIO.IN)
-	if relayOn[0] == 'off':
-		print (relayOn[1])
-		GPIO.setup(pins[1], GPIO.OUT)
-
-#function to poll FSRs
-def polling(seconds,sensor):
-	global sensor1, sensor2
+	global relayOn
 	while running != 'n':
-		if sensor == 1: sensor1 = ADC.adcMeasure(0)
-		if sensor == 2: sensor2 = ADC.adcMeasure(1)
-		sleep(seconds)
+		if relayOn[0] == 'on':
+			GPIO.setup(pins[0], GPIO.OUT)
+		else:
+			GPIO.setup(pins[0], GPIO.IN)
+
+		if relayOn[1] == 'on':
+			GPIO.setup(pins[1], GPIO.OUT)
+		else:
+			GPIO.setup(pins[1], GPIO.IN)
 
 relayThread = threading.Thread(target=relayOnOrOff)
-waterPollThread = threading.Thread(target=polling,args=(delay,1))
-waterRelayThread = threading.Thread(target=waterRelaySwitch)
-foodRelayThread = threading.Thread(target = foodRelaySwitch)
-waterQuickPollThread = threading.Thread(target=polling,args=(.25,1))
-foodQuickPollThread = threading.Thread(target=polling,args=(.25,2))
+waterPollThread = threading.Thread(target=polling,args=(delay,))
+waterRelayOnThread = threading.Thread(target=waterRelayOn)
+waterRelayOffThread = threading.Thread(target=waterRelayOff)
+foodRelayOnThread = threading.Thread(target=foodRelayOn)
+foodRelayOffThread = threading.Thread(target=foodRelayOff)
 
 relayThread.start()
 waterPollThread.start()
-waterRelayThread.start()
-foodRelayThread.start()
+waterRelayOnThread.start()
+waterRelayOffThread.start()
+foodRelayOnThread.start()
+foodRelayOffThread.start()
 
 x = 0
 while running != 'n':
 #	sensor1 = ADC.adcMeasure(0)
 #	sensor2 = ADC.adcMeasure(1)
+
 	os.system('clear')
 	print (sensor1)
 	print (sensor2)
+	print (relayOn)
+	print (waterThresh)
+	print (foodThresh)
+#	if (relayOn[0] == 'on' and sensor1 >= waterThresh[1]):
+#		relay[0] = 'off'
+#	if (relayOn[1] == 'on' and sensor2 >= foodThresh[1]):
+#		relay[1] = 'off'
 
-#	if (relayOn[0] == 'on'):
-#		print (relayOn[0])
-#		GPIO.setup(pins[0],GPIO.OUT)
-#	elif (relayOn[0] == 'off'):
-#		print (relayOn[0])
-#		GPIO.setup(pins[0],GPIO.IN)
-#
 	sleep(1)
 	x += 1
 
-	if x == 10:
+	if x == 30:
 		for x in pins:
 			GPIO.cleanup(x)
+		running = 'n'
+		exit()
